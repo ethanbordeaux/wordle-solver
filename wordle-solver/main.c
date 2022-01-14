@@ -30,9 +30,6 @@
 // play against every word in input dictionary, modifying start word
 #define GAME_MODE_START_OPTIMIZE    3
 
-// play against Wordle dictionary (target words and full dictionary are different sizes)
-#define GAME_MODE_WORDLE_CHECK      4
-
 // used in dictionary validation
 #define MAX_WORD_SIZE               100
 
@@ -137,14 +134,23 @@ void print_help(void)
 {
     printf("wordle-solver: algorithm for efficiently solving the Wordle game\n");
     printf("\n");
-    printf("    -help                        print help\n");
-    printf("    -v                           verbose output\n");
+    printf("General Configuration\n");
     printf("\n");
-    printf("    -file=/path/to/dict.txt      load a dictionary file (single word per line)\n");
-    printf("    -single=word                 play single game against a word\n");
-    printf("    -full-dictionary             play against every word in the dictionary\n");
-    printf("    -rand=n                      play n random games\n");
-    printf("    -wordle-check                play against the Wordle dictionary\n");
+    printf("    -help                           print help\n");
+    printf("    -v                              verbose output\n");
+    printf("\n");
+    printf("Dictionary Configuration\n");
+    printf("\n");
+    printf("    -dictionary=/path/to/dict.txt   load a dictionary file (ASCII, single word per line)\n");
+    printf("    -wordle-dictionary              play against the Wordle dictionary\n");
+    printf("    -start-word=word                set word for first guess\n");
+    printf("\n");
+    printf("Game Modes\n");
+    printf("\n");
+    printf("    -single=word                    play single game against word\n");
+    printf("    -full-dictionary                play against every word in the dictionary\n");
+    printf("    -rand=n                         play n random games\n");
+    printf("    -find-start-word                try every start word against full dictionary\n");
 }
 
 int main(int argc, const char * argv[])
@@ -155,6 +161,8 @@ int main(int argc, const char * argv[])
     int game_mode = GAME_MODE_UNSET;
     bool verbose = false;
     int num_games = 0;
+    char start_word[WORDLE_WORD_SIZE+1] = "tromp";
+    bool using_wordle_dictionary = false;
     
     int i_argv = 1;
     while(argv[i_argv] != NULL)
@@ -168,6 +176,11 @@ int main(int argc, const char * argv[])
         {
             if(game_mode == GAME_MODE_UNSET)
             {
+                if(strlen(argv[i_argv]) != strlen("-single=")+WORDLE_WORD_SIZE)
+                {
+                    printf("invalid input word; exiting...\n");
+                    return 1;
+                }
                 strcpy(target_word, &argv[i_argv][strlen("-single=")]);
                 printf("target word is %s\n", target_word);
                 game_mode = GAME_MODE_SINGLE;
@@ -178,6 +191,25 @@ int main(int argc, const char * argv[])
                 return 1;
             }
         }
+        else if(!strncmp(argv[i_argv], "-start-word=", strlen("-start-word=")))
+        {
+            if(strlen(argv[i_argv]) != strlen("-start-word=")+WORDLE_WORD_SIZE)
+            {
+                printf("invalid start word; exiting...\n");
+                return 1;
+            }
+            strcpy(start_word, &argv[i_argv][strlen("-start-word=")]);
+            printf("start word is %s\n", start_word);
+        }
+        else if(!strncmp(argv[i_argv], "-find-start-word", strlen("-find-start-word")))
+        {
+            if(game_mode != GAME_MODE_UNSET)
+            {
+                printf("conflicting game modes; exiting...\n");
+                return 1;
+            }
+            game_mode = GAME_MODE_START_OPTIMIZE;
+        }
         else if(!strncmp(argv[i_argv], "-full-dictionary", strlen("-full-dictionary")))
         {
             if(game_mode == GAME_MODE_UNSET)
@@ -187,7 +219,7 @@ int main(int argc, const char * argv[])
             }
             else
             {
-                printf("unclear set of parameters trying to start multiple simulation types; exiting...\n");
+                printf("conflicting game modes; exiting...\n");
                 return 1;
             }
         }
@@ -195,9 +227,14 @@ int main(int argc, const char * argv[])
         {
             verbose = true;
         }
-        else if(!strncmp(argv[i_argv], "-wordle-check", strlen("-wordle-check")))
+        else if(!strncmp(argv[i_argv], "-wordle-dictionary", strlen("-wordle-dictionary")))
         {
-            game_mode = GAME_MODE_WORDLE_CHECK;
+            for(int i=0; i<LEN_WORDLE_DICTIONARY; i++)
+            {
+                strcpy(dictionary[i], wordle_full_dictionary[i]);
+            }
+            dictionary_entries = LEN_WORDLE_DICTIONARY;
+            using_wordle_dictionary = true;
         }
         else if(!strncmp(argv[i_argv], "-rand=", strlen("-rand=")))
         {
@@ -216,7 +253,7 @@ int main(int argc, const char * argv[])
         }
         else if(!strncmp(argv[i_argv], "-file=", strlen("-file=")))
         {
-            if(game_mode == GAME_MODE_WORDLE_CHECK)
+            if(using_wordle_dictionary)
             {
                 printf("should not be loading dictionary when using Wordle dictionaries; exiting...\n");
                 return 1;
@@ -271,17 +308,17 @@ int main(int argc, const char * argv[])
         i_argv++;
     }
     
+    if(dictionary_entries == 0)
+    {
+        printf("no dictionary loaded; exiting...\n");
+        return 1;
+    }
+
     // this one's too different so it gets it's own function
     if(game_mode == GAME_MODE_START_OPTIMIZE)
     {
         find_optimal_word(dictionary, dictionary_entries, verbose);
         return 0;
-    }
-
-    if(dictionary_entries == 0)
-    {
-        printf("no dictionary loaded; exiting...\n");
-        return 1;
     }
     
     srand((unsigned int)time(NULL));
@@ -305,10 +342,6 @@ int main(int argc, const char * argv[])
         case GAME_MODE_RAND:
             tot_games = num_games;
             break;
-            
-        case GAME_MODE_WORDLE_CHECK:
-            tot_games = LEN_WORDLE_TARGET_WORDS;
-            break;
     }
     
     while(game_count < tot_games)
@@ -324,17 +357,20 @@ int main(int argc, const char * argv[])
                 break;
                 
             case GAME_MODE_RAND:
-                strcpy(target_word, &dictionary[rand()%dictionary_entries][0]);
-                break;
-                
-            case GAME_MODE_WORDLE_CHECK:
-                strcpy(target_word, &wordle_target_words[game_count][0]);
+                if(using_wordle_dictionary)
+                {
+                    strcpy(target_word, &wordle_target_words[rand()%LEN_WORDLE_TARGET_WORDS][0]);
+                }
+                else
+                {
+                    strcpy(target_word, &dictionary[rand()%dictionary_entries][0]);
+                }
                 break;
         }
 
         s_wordle_state wordle_state;
 
-        ws_init(&wordle_state, "tromp");
+        ws_init(&wordle_state, start_word);
         
         printf("searching for word %s\n", target_word);
 
@@ -342,24 +378,12 @@ int main(int argc, const char * argv[])
         int ret;
         do
         {
-            if(game_mode == GAME_MODE_WORDLE_CHECK)
-            {
-                ret = ws_make_guess(&wordle_state,
-                                    target_word,
-                                    wordle_full_dictionary,
-                                    dictionary_entries,
-                                    verbose);
-            }
-            else
-            {
-                ret = ws_make_guess(&wordle_state,
-                                    target_word,
-                                    dictionary,
-                                    dictionary_entries,
-                                    verbose);
-            }
+            ret = ws_make_guess(&wordle_state,
+                                 target_word,
+                                 dictionary,
+                                 dictionary_entries,
+                                 verbose);
             guess_count++;
-            
         } while(!ret);
         
         if(guess_count < 20)
@@ -397,7 +421,6 @@ int main(int argc, const char * argv[])
     {
         case GAME_MODE_RAND:
         case GAME_MODE_FULL_DICT:
-        case GAME_MODE_WORDLE_CHECK:
             for(int i=1; i<20; i++)
             {
                 printf("%d found in %d guesses\n", guesses_per_win[i], i);

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<VariablesViewState
+   version = "1.0">
+   <ContextStates>
+      <ContextState
+         contextName = "main:main.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "argv[i_argv]">
+            </PersistentString>
+            <PersistentString
+               value = "words[i]">
+            </PersistentString>
+            <PersistentString
+               value = "argv[i_argv][0]">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "make_guess:main.c">
+         <PersistentStrings>
+            <PersistentString
+               value = "dictionary[i]">
+            </PersistentString>
+            <PersistentString
+               value = "dictionary[j][i]-&apos;a&apos;">
+            </PersistentString>
+         </PersistentStrings>
+      </ContextState>
+      <ContextState
+         contextName = "ws_make_guess:wordle-solver.c">
+      </ContextState>
+   </ContextStates>
+</VariablesViewState>

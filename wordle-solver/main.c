@@ -135,9 +135,16 @@ void find_optimal_word(char dictionary[MAX_DICTIONARY_SIZE][WORDLE_WORD_SIZE+1],
 
 void print_help(void)
 {
-    printf("wordle-solver\n");
+    printf("wordle-solver: algorithm for efficiently solving the Wordle game\n");
     printf("\n");
-    printf("    -help          print help\n");
+    printf("    -help                        print help\n");
+    printf("    -v                           verbose output\n");
+    printf("\n");
+    printf("    -file=/path/to/dict.txt      load a dictionary file (single word per line)\n");
+    printf("    -single=word                 play single game against a word\n");
+    printf("    -full-dictionary             play against every word in the dictionary\n");
+    printf("    -rand=n                      play n random games\n");
+    printf("    -wordle-check                play against the Wordle dictionary\n");
 }
 
 int main(int argc, const char * argv[])
@@ -187,6 +194,10 @@ int main(int argc, const char * argv[])
         else if(!strncmp(argv[i_argv], "-v", strlen("-v")))
         {
             verbose = true;
+        }
+        else if(!strncmp(argv[i_argv], "-wordle-check", strlen("-wordle-check")))
+        {
+            game_mode = GAME_MODE_WORDLE_CHECK;
         }
         else if(!strncmp(argv[i_argv], "-rand=", strlen("-rand=")))
         {
